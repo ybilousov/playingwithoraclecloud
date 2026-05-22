@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # ===== Nginx Proxy Manager =====
   app:
     image: '${NPM_IMAGE:-jc21/nginx-proxy-manager:latest}'
     container_name: nginx-proxy-manager
@@ -21,6 +22,7 @@ services:
     depends_on:
       - db
 
+  # ===== Nginx Proxy Manager Database =====
   db:
     image: '${DB_IMAGE:-jc21/mariadb-aria:latest}'
     container_name: npm-db
@@ -32,3 +34,97 @@ services:
       MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
     volumes:
       - ./mysql:/var/lib/mysql
+
+  # ===== WordPress Shared Database =====
+  shared_db:
+    image: '${WP_DB_IMAGE:-mariadb:10.11}'
+    container_name: wordpress_shared_db
+    restart: always
+    volumes:
+      - shared_db_data:/var/lib/mysql
+    environment:
+      MARIADB_ROOT_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== WordPress Site 1 =====
+  site1:
+    image: '${WP_IMAGE:-wordpress:latest}'
+    container_name: wp_site_1
+    restart: always
+    ports:
+      - "${WP_SITE1_PORT}:80"
+    depends_on:
+      shared_db:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: shared_db:3306
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
+      WORDPRESS_DB_NAME: ${WP_SITE1_DB_NAME}
+    volumes:
+      - wp_site1_data:/var/www/html
+
+  # ===== WordPress Site 2 =====
+  site2:
+    image: '${WP_IMAGE:-wordpress:latest}'
+    container_name: wp_site_2
+    restart: always
+    ports:
+      - "${WP_SITE2_PORT}:80"
+    depends_on:
+      shared_db:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: shared_db:3306
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
+      WORDPRESS_DB_NAME: ${WP_SITE2_DB_NAME}
+    volumes:
+      - wp_site2_data:/var/www/html
+
+  # ===== WordPress Site 3 =====
+  site3:
+    image: '${WP_IMAGE:-wordpress:latest}'
+    container_name: wp_site_3
+    restart: always
+    ports:
+      - "${WP_SITE3_PORT}:80"
+    depends_on:
+      shared_db:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: shared_db:3306
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
+      WORDPRESS_DB_NAME: ${WP_SITE3_DB_NAME}
+    volumes:
+      - wp_site3_data:/var/www/html
+
+  # ===== WordPress Site 4 =====
+  site4:
+    image: '${WP_IMAGE:-wordpress:latest}'
+    container_name: wp_site_4
+    restart: always
+    ports:
+      - "${WP_SITE4_PORT}:80"
+    depends_on:
+      shared_db:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: shared_db:3306
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
+      WORDPRESS_DB_NAME: ${WP_SITE4_DB_NAME}
+    volumes:
+      - wp_site4_data:/var/www/html
+
+volumes:
+  shared_db_data:
+  wp_site1_data:
+  wp_site2_data:
+  wp_site3_data:
+  wp_site4_data:
