@@ -20,7 +20,8 @@ services:
       - ./data:/data
       - ./letsencrypt:/etc/letsencrypt
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   # ===== Nginx Proxy Manager Database =====
   db:
@@ -34,6 +35,11 @@ services:
       MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
     volumes:
       - ./mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$MYSQL_ROOT_PASSWORD\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ===== WordPress Shared Database =====
   shared_db:
@@ -42,10 +48,11 @@ services:
     restart: always
     volumes:
       - shared_db_data:/var/lib/mysql
+      - ./shared_db_init:/docker-entrypoint-initdb.d:ro
     environment:
       MARIADB_ROOT_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$WP_DB_ROOT_PASSWORD\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -65,6 +72,7 @@ services:
       WORDPRESS_DB_USER: root
       WORDPRESS_DB_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
       WORDPRESS_DB_NAME: ${WP_SITE1_DB_NAME}
+    command: sh -c "sleep ${WP_START_DELAY:-15} && docker-entrypoint.sh apache2-foreground"
     volumes:
       - wp_site1_data:/var/www/html
 
@@ -83,6 +91,7 @@ services:
       WORDPRESS_DB_USER: root
       WORDPRESS_DB_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
       WORDPRESS_DB_NAME: ${WP_SITE2_DB_NAME}
+    command: sh -c "sleep ${WP_START_DELAY:-15} && docker-entrypoint.sh apache2-foreground"
     volumes:
       - wp_site2_data:/var/www/html
 
@@ -101,6 +110,7 @@ services:
       WORDPRESS_DB_USER: root
       WORDPRESS_DB_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
       WORDPRESS_DB_NAME: ${WP_SITE3_DB_NAME}
+    command: sh -c "sleep ${WP_START_DELAY:-15} && docker-entrypoint.sh apache2-foreground"
     volumes:
       - wp_site3_data:/var/www/html
 
@@ -119,6 +129,7 @@ services:
       WORDPRESS_DB_USER: root
       WORDPRESS_DB_PASSWORD: "${WP_DB_ROOT_PASSWORD}"
       WORDPRESS_DB_NAME: ${WP_SITE4_DB_NAME}
+    command: sh -c "sleep ${WP_START_DELAY:-15} && docker-entrypoint.sh apache2-foreground"
     volumes:
       - wp_site4_data:/var/www/html
 
